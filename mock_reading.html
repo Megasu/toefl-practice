@@ -1352,6 +1352,7 @@
         // 3. 数据拉取与解析 (直接参照 tc.html fetchWithFallback 重写)
         // ==========================================
         const MD_URLS = [
+            "./source.md",
             "https://raw.githubusercontent.com/yuyu1221-7/toefl-practice/main/source.md",
             "https://cdn.jsdelivr.net/gh/yuyu1221-7/toefl-practice@main/source.md"
         ];
@@ -1377,6 +1378,7 @@
 
             try {
                 const titleRes = await fetchWithFallback([
+                    './reading_qb/title.txt',
                     'https://yuyu1221-7.github.io/toefl-practice/reading_qb/title.txt',
                     'https://raw.githubusercontent.com/yuyu1221-7/toefl-practice/main/reading_qb/title.txt'
                 ]);
@@ -1390,6 +1392,7 @@
 
                 const fetchPromises = filenames.map(async (filename) => {
                     const urls = [
+                        `./reading_qb/${filename}`,
                         `https://yuyu1221-7.github.io/toefl-practice/reading_qb/${filename}`,
                         `https://raw.githubusercontent.com/yuyu1221-7/toefl-practice/main/reading_qb/${filename}`
                     ];
@@ -1536,6 +1539,7 @@
             let title3List = [];
             try {
                 const title3Res = await fetchWithFallback([
+                    './title3.json',
                     'https://yuyu1221-7.github.io/toefl-practice/title3.json',
                     'https://raw.githubusercontent.com/yuyu1221-7/toefl-practice/main/title3.json'
                 ]);

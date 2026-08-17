@@ -624,12 +624,14 @@
         // GitHub / Gitee 双源自动加载与本地文件处理逻辑
         // ==========================================
 
-        // 数据源配置 (优先 GitHub，失败则用 Gitee)
+        // 数据源配置（优先当前部署，失败则用上游镜像）
         const MD_URLS = [
+            "./db_qb.md",
             "https://raw.githubusercontent.com/yuyu1221-7/toefl-practice/main/db_qb.md",
             "https://gitee.com/yuyu1221-7/toefl-practice/raw/main/db_qb.md"
         ];
         const JSON_URLS = [
+            "./title.json",
             "https://raw.githubusercontent.com/yuyu1221-7/toefl-practice/main/title.json",
             "https://gitee.com/yuyu1221-7/toefl-practice/raw/main/title.json"
         ];

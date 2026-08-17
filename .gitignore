@@ -1,0 +1,16 @@
+# dependencies and build output
+/node_modules/
+/.next/
+/.vinext/
+/dist/
+/.wrangler/
+
+# generated static mirror
+/public/practice/
+
+# local files
+.DS_Store
+.env*
+npm-debug.log*
+/outputs/
+/work/

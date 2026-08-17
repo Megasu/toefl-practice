@@ -29,4 +29,8 @@ await cp(join(projectRoot, "reading_qb"), join(outputRoot, "reading_qb"), {
   recursive: true,
 });
 
+await cp(join(projectRoot, "sentence_assets"), join(outputRoot, "sentence_assets"), {
+  recursive: true,
+});
+
 await buildSentenceBank({ projectRoot, outputRoot });

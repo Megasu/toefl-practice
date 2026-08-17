@@ -67,6 +67,9 @@ assert(sentenceHtml.includes("./sentence.css"), "句子页必须使用独立样�
 assert(sentenceHtml.includes("./sentence.js"), "句子页必须使用独立交互脚本");
 assert(sentenceHtml.includes("TOEFL 备考系统"), "句子页必须沿用主站导航品牌");
 assert(sentenceCss.includes("#f8fafc"), "句子页必须沿用主站背景色");
+assert(sentenceJs.includes("speaker-woman.png"), "首句对话必须保留人物头像");
+assert(sentenceJs.includes("speaker-man.png"), "答句对话必须保留人物头像");
+assert(sentenceCss.includes(".speaker-avatar"), "人物头像必须使用统一的圆形对话样式");
 
 const scoringQuestion = bank.questions.find(
   (question) => question.structure.filter((part) => part.type === "blank").length > 1,

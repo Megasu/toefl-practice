@@ -484,11 +484,15 @@
 
                                 <div class="dialogue-panel">
                                     <div class="dialogue-row">
-                                        <span class="speaker-badge bg-emerald-100 text-emerald-700">A</span>
+                                        <div class="speaker-avatar speaker-avatar--woman" role="img" aria-label="人物 A">
+                                            <img src="./sentence_assets/speaker-woman.png" alt="" draggable="false" width="320" height="292">
+                                        </div>
                                         <p class="sentence-line font-semibold pt-1">${escapeHtml(question.topText)}</p>
                                     </div>
                                     <div class="dialogue-row">
-                                        <span class="speaker-badge bg-blue-100 text-blue-700">B</span>
+                                        <div class="speaker-avatar speaker-avatar--man" role="img" aria-label="人物 B">
+                                            <img src="./sentence_assets/speaker-man.png" alt="" draggable="false" width="320" height="320">
+                                        </div>
                                         <div class="sentence-line pt-1">${renderSentenceParts(question)}</div>
                                     </div>
                                 </div>

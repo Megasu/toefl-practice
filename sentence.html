@@ -125,6 +125,8 @@
         .pool-option {
             background-color: transparent;
             color: #000;
+            border: 1px solid transparent;
+            font-family: inherit;
             padding: 8px 16px;
             font-size: 19px;
             cursor: pointer;
@@ -141,6 +143,21 @@
             opacity: 0.72;
         }
         .pool-option.used:hover { background-color: #f3f4f6; }
+        .pool-option:focus-visible, .filled-word:focus-visible, .drop-slot:focus-visible {
+            outline: 3px solid rgba(39, 107, 112, 0.35);
+            outline-offset: 3px;
+        }
+        .category-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: #e7f6f3;
+            color: #276b70;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
 
         .review-table-container {
             width: 100%;
@@ -190,6 +207,42 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        @media (max-width: 768px) {
+            body { overflow-x: hidden; }
+            .app-container { width: 100%; min-height: 100dvh; box-shadow: none; }
+            .top-bar {
+                height: auto;
+                min-height: 68px;
+                padding: 10px 12px;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .top-bar .tpo-btn {
+                min-height: 42px;
+                height: 42px;
+                padding: 0 14px;
+                font-size: 13px;
+            }
+            .sub-bar {
+                height: auto;
+                min-height: 52px;
+                padding: 10px 14px;
+                gap: 8px;
+                font-size: 13px;
+                flex-wrap: wrap;
+            }
+            .question-area { padding: 28px 18px 56px !important; align-items: stretch; }
+            .question-area > h2 { font-size: 22px !important; margin-bottom: 32px !important; text-align: center; }
+            .dialogue-stack { gap: 30px !important; }
+            .dialogue-row { gap: 16px !important; align-items: flex-start !important; }
+            .speaker-avatar { width: 68px !important; height: 68px !important; flex: 0 0 68px; }
+            .dialogue-text, .sentence-flow { font-size: 17px !important; line-height: 2.1 !important; }
+            .options-pool { margin-top: 44px !important; gap: 8px !important; }
+            .pool-option { font-size: 16px; padding: 10px 12px; background: #f8fafc; border-color: #e2e8f0; }
+            .answer-panel { margin-top: 28px !important; padding: 18px !important; }
+            .review-table-container { padding: 24px 14px; }
+        }
     </style>
 </head>
 <body id="main-body">
@@ -212,8 +265,17 @@
     let uniqueDatabase = []; 
     let moduleNames = []; 
 
+    let sentenceBankMeta = null;
+
+    const CATEGORY_CONFIG = {
+        'relative-clause': { label: '定语从句', description: '关系词与修饰结构', tone: 'bg-sky-50 text-sky-700 border-sky-200' },
+        'noun-clause': { label: '名词性从句', description: '宾语从句与疑问词语序', tone: 'bg-violet-50 text-violet-700 border-violet-200' },
+        'question': { label: '问句', description: '一般疑问句与特殊疑问句', tone: 'bg-amber-50 text-amber-700 border-amber-200' },
+        'verb-collocation': { label: '动词和固定搭配', description: '高频动词、介词与固定表达', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+    };
+
     let state = {
-        screen: 'upload', 
+        screen: 'loading',
         mode: 'practice', 
         questions: [],
         currentQIndex: 0,
@@ -232,11 +294,52 @@
         currentHistoryRecord: null,
         timeSpent: {},
         lastScreenBeforeReview: null,
-        dataDashDate: '' 
+        dataDashDate: '',
+        activeCategory: 'all'
     };
 
     const appEl = document.getElementById('app');
     const mainBody = document.getElementById('main-body');
+
+    function loadPreparedData(bank) {
+        if (!bank || !Array.isArray(bank.questions) || bank.questions.length === 0) {
+            throw new Error('题库内容为空');
+        }
+        sentenceBankMeta = bank;
+        fullDatabase = bank.questions;
+        moduleNames = bank.moduleNames || [...new Set(fullDatabase.map(q => q.moduleId))];
+        const uniqueMap = new Map();
+        fullDatabase.forEach(q => {
+            const key = q.duplicateKey || `${q.topText}|||${q.sen2Str}`;
+            if (!uniqueMap.has(key)) uniqueMap.set(key, q);
+        });
+        uniqueDatabase = Array.from(uniqueMap.values());
+        state.dataDashDate = moduleNames[0] || '';
+        state.screen = 'dashboard';
+        render();
+    }
+
+    async function initializeSentenceApp() {
+        render();
+        try {
+            const response = await fetch(`./sentence_qb/manifest.json?v=3`, { cache: 'no-cache' });
+            if (!response.ok) throw new Error(`题库清单请求失败 (${response.status})`);
+            const manifest = await response.json();
+            const chunks = await Promise.all((manifest.files || []).map(async fileInfo => {
+                const chunkResponse = await fetch(`./sentence_qb/${fileInfo.file}?v=${manifest.version}`, { cache: 'no-cache' });
+                if (!chunkResponse.ok) throw new Error(`${fileInfo.file} 请求失败 (${chunkResponse.status})`);
+                return chunkResponse.json();
+            }));
+            loadPreparedData({
+                ...manifest,
+                questions: chunks.flatMap(chunk => chunk.questions || [])
+            });
+        } catch (error) {
+            console.error('自动载入句子题库失败', error);
+            state.screen = 'upload';
+            render();
+        }
+    }
 
     function parseMDData(mdText) {
         fullDatabase = [];
@@ -383,6 +486,34 @@
         if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
     }
 
+    function getQuestionCategory(q) {
+        return (q.categories && q.categories[0]) || 'verb-collocation';
+    }
+
+    function getCategoryQuestions(categoryId, source = uniqueDatabase) {
+        if (categoryId === 'all') return [...source];
+        return source.filter(q => getQuestionCategory(q) === categoryId);
+    }
+
+    function shuffleOptions(options) {
+        const shuffled = [...options];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function isQuestionCorrect(q, answerMap) {
+        const blanks = q.structure.filter(part => part.type === 'blank');
+        if (!answerMap || Object.keys(answerMap).length !== blanks.length) return false;
+        return blanks.every(blank => {
+            const chosen = q.options.find(option => option.id === answerMap[blank.id]);
+            const expected = q.options.find(option => option.id === q.correctAnswers[blank.id]);
+            return Boolean(chosen && expected && chosen.text === expected.text);
+        });
+    }
+
     function saveHistory(score, timeSpent) {
         const history = JSON.parse(localStorage.getItem('toefl_history') || '[]');
         const record = {
@@ -395,7 +526,9 @@
             questions: state.questions,
             answers: state.answers,
             timeSpentPerQ: state.timeSpent,
-            moduleId: state.mode === 'mock' ? state.questions[0].moduleId : 'Mixed Practice'
+            moduleId: state.mode === 'mock'
+                ? state.questions[0].moduleId
+                : (state.activeCategory === 'all' ? 'Mixed Practice' : CATEGORY_CONFIG[state.activeCategory].label)
         };
         history.unshift(record);
         localStorage.setItem('toefl_history', JSON.stringify(history));
@@ -407,7 +540,7 @@
         let content = `TOEFL Build a Sentence - ${record.mode === 'mock' ? 'Mock Exam' : 'Practice'} Log\nDate: ${record.dateStr}\nScore: ${record.score}/${record.total}\n\n`;
         
         record.questions.forEach((q, idx) => {
-            let isCorrect = true;
+            const isCorrect = isQuestionCorrect(q, record.answers[q.id]);
             let userStr = "", correctStr = "";
             let timeForQ = record.timeSpentPerQ ? record.timeSpentPerQ[q.id] || 0 : 0;
             
@@ -415,13 +548,8 @@
                  if(slot.type === 'static') {
                    userStr += slot.text; correctStr += slot.text;
                  } else {
-                   const ansId = record.answers[q.id][slot.id];
+                   const ansId = record.answers[q.id]?.[slot.id];
                    const userOpt = q.options.find(o => o.id === ansId);
-                   const correctOpt = q.options.find(o => o.id === q.correctAnswers[slot.id]);
-                   if (!userOpt || !correctOpt || userOpt.text !== correctOpt.text) {
-                     isCorrect = false;
-                   }
-            
                    const opt = userOpt;
                     let w = opt ? opt.text : "________";
                     if(sIdx === 0 && opt) w = w.charAt(0).toUpperCase() + w.slice(1);
@@ -467,6 +595,7 @@
 
     function startPractice(sortType) {
         state.mode = 'practice';
+        state.activeCategory = 'all';
         let qList = [];
         if (sortType === 'asc' || sortType === 'random') {
             qList = [...fullDatabase]; 
@@ -481,14 +610,25 @@
         setupExamData(qList, 0); 
     }
 
+    function startCategoryPractice(categoryId) {
+        if (!CATEGORY_CONFIG[categoryId]) return;
+        state.mode = 'practice';
+        state.activeCategory = categoryId;
+        setupExamData(shuffleOptions(getCategoryQuestions(categoryId)), 0);
+    }
+
     function startMock(moduleId) {
         state.mode = 'mock';
+        state.activeCategory = 'all';
         let qList = fullDatabase.filter(q => q.moduleId === moduleId);
         setupExamData(qList, 6 * 60 + 50); 
     }
 
     function setupExamData(qList, time) {
-        state.questions = qList;
+        state.questions = qList.map(q => ({
+            ...q,
+            displayOptions: shuffleOptions(q.options)
+        }));
         state.totalTime = time;
         state.timeRemaining = time;
         state.answers = {};
@@ -556,19 +696,7 @@
         if (attemptedQs.length > 0) {
             let score = 0;
             attemptedQs.forEach(q => {
-              let correct = true;
-              q.structure.forEach(s => {
-                if(s.type === 'blank') {
-                  const userAnsId = state.answers[q.id]?.[s.id];
-                  const correctAnsId = q.correctAnswers[s.id];
-                  const userOpt = q.options.find(o => o.id === userAnsId);
-                  const correctOpt = q.options.find(o => o.id === correctAnsId);
-                  if (!userOpt || !correctOpt || userOpt.text !== correctOpt.text) {
-                    correct = false;
-                  }
-                }
-              });
-              if(correct) score++;
+              if (isQuestionCorrect(q, state.answers[q.id])) score++;
             });
             const originalQs = state.questions;
             state.questions = attemptedQs;
@@ -587,19 +715,7 @@
         
         const attemptedQs = state.questions.filter(q => Object.keys(state.answers[q.id] || {}).length > 0 || state.timeSpent[q.id] > 0);
         state.questions.forEach(q => {
-            let correct = true;
-            q.structure.forEach(s => {
-              if(s.type === 'blank') {
-                const userAnsId = state.answers[q.id]?.[s.id];
-                const correctAnsId = q.correctAnswers[s.id];
-                const userOpt = q.options.find(o => o.id === userAnsId);
-                const correctOpt = q.options.find(o => o.id === correctAnsId);
-                if (!userOpt || !correctOpt || userOpt.text !== correctOpt.text) {
-                  correct = false;
-                }
-              }
-            });
-            if(correct) score++;
+            if (isQuestionCorrect(q, state.answers[q.id])) score++;
         });
         
         let timeSpent = state.mode === 'mock' ? (state.totalTime - state.timeRemaining) : 0;
@@ -681,6 +797,12 @@
             delete state.answers[qId][slotId];
             state.checkActive = false;
             render();
+        }
+    }
+    function handleSlotKey(event, slotId) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleSlotClick(slotId);
         }
     }
     function onDragStart(e, optId, sourceSlot) {
@@ -779,10 +901,21 @@
             `;
     }
 
+    function renderLoading() {
+        return `
+            <div class="w-full min-h-screen bg-[#f8fafc] flex items-center justify-center font-sans">
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-[#276b70] text-white flex items-center justify-center text-2xl font-black mx-auto mb-6 shadow-lg">T</div>
+                    <h1 class="text-2xl font-black text-slate-800 mb-3">正在载入句子组合题库</h1>
+                    <p class="text-slate-500 text-sm">正在校验题目与标准答案，请稍候…</p>
+                </div>
+            </div>`;
+    }
+
     function renderDashboard() {
         return `
             <header class="w-full bg-white border-b border-gray-100 py-4 px-10 shadow-sm flex justify-between items-center shrink-0 font-sans">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="state.screen='dashboard'; render()">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='./index.html'" title="返回 TOEFL 备考大厅">
                     <div class="text-gray-500 hover:text-gray-700 transition flex items-center justify-center">
                         <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -815,7 +948,7 @@
                                         <p class="text-slate-400 text-xs font-bold tracking-wider uppercase mt-0.5">Practice Hub</p>
                                     </div>
                                 </div>
-                                <p class="text-slate-600 text-[15px] leading-relaxed font-medium mt-4">支持正序、乱序以及根据大数据智能计算的高低频排序进行无压针对性练习，做题中可随时查看正确答案与解析。</p>
+                                <p class="text-slate-600 text-[15px] leading-relaxed font-medium mt-4">按定语从句、名词性从句、问句、动词和固定搭配四类专项练习。词块每次打乱，任一空位错误则整题不得分。</p>
                             </div>
                             <div class="flex justify-between items-center mt-6">
                                 <span class="bg-white/80 backdrop-blur text-[#047857] px-4 py-2 rounded-2xl text-[13px] font-bold shadow-sm">共收录 ${uniqueDatabase.length} 道独立题目</span>
@@ -961,31 +1094,37 @@
         `;
     }
 
-    // 修复 1：练习模式更新为 2x2 网格
     function renderPracticeSetup() {
+        const categoryCards = Object.entries(CATEGORY_CONFIG).map(([id, category]) => {
+            const count = getCategoryQuestions(id).length;
+            return `
+                <button type="button" class="text-left p-5 rounded-2xl border ${category.tone} hover:-translate-y-1 hover:shadow-lg transition duration-200 min-h-[142px]" onclick="startCategoryPractice('${id}')">
+                    <span class="block text-lg font-black mb-2">${category.label}</span>
+                    <span class="block text-sm opacity-80 leading-relaxed mb-4">${category.description}</span>
+                    <span class="inline-flex bg-white/80 px-3 py-1.5 rounded-full text-xs font-extrabold">${count} 道去重题</span>
+                </button>`;
+        }).join('');
+
         return `
-            <div class="w-full min-h-screen bg-[#f4f6f8] flex items-center justify-center font-sans">
-                <div class="bg-white p-10 rounded-3xl shadow-xl w-[700px] border border-gray-100">
-                    <div class="flex justify-between items-center mb-8">
-                        <h2 class="text-2xl font-black text-[#111]">练习模式设置</h2>
+            <div class="w-full min-h-screen bg-[#f4f6f8] flex items-center justify-center font-sans px-4 py-10">
+                <div class="bg-white p-6 md:p-10 rounded-3xl shadow-xl w-full max-w-[900px] border border-gray-100">
+                    <div class="flex justify-between items-start gap-4 mb-8">
+                        <div>
+                            <h2 class="text-2xl font-black text-[#111] mb-2">四类专项练习</h2>
+                            <p class="text-sm text-slate-500">每题只有一种主分类；整句话完全正确才得 1 分。</p>
+                        </div>
                         <button onclick="state.screen='dashboard'; render()" class="text-gray-400 hover:text-gray-800 font-bold text-sm transition">取消</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="cursor-pointer p-6 bg-gray-50 hover:bg-[#e6fcf5] hover:text-[#047857] rounded-2xl transition duration-200 shadow-sm border border-transparent hover:border-[#a3e635] flex flex-col justify-center items-center text-center h-32" onclick="startPractice('asc')">
-                            <span class="font-extrabold text-lg mb-1">正序练习</span>
-                            <span class="text-xs font-semibold text-gray-500">全库遍历</span>
-                        </div>
-                        <div class="cursor-pointer p-6 bg-gray-50 hover:bg-[#e6fcf5] hover:text-[#047857] rounded-2xl transition duration-200 shadow-sm border border-transparent hover:border-[#a3e635] flex flex-col justify-center items-center text-center h-32" onclick="startPractice('random')">
-                            <span class="font-extrabold text-lg mb-1">乱序练习</span>
-                            <span class="text-xs font-semibold text-gray-500">全库随机</span>
-                        </div>
-                        <div class="cursor-pointer p-6 bg-gray-50 hover:bg-[#e6fcf5] hover:text-[#047857] rounded-2xl transition duration-200 shadow-sm border border-transparent hover:border-[#a3e635] flex flex-col justify-center items-center text-center h-32" onclick="startPractice('freq_desc')">
-                            <span class="font-extrabold text-lg mb-1">考频降序</span>
-                            <span class="text-xs font-semibold text-gray-500">去重 - 高频优先</span>
-                        </div>
-                        <div class="cursor-pointer p-6 bg-gray-50 hover:bg-[#e6fcf5] hover:text-[#047857] rounded-2xl transition duration-200 shadow-sm border border-transparent hover:border-[#a3e635] flex flex-col justify-center items-center text-center h-32" onclick="startPractice('freq_asc')">
-                            <span class="font-extrabold text-lg mb-1">考频升序</span>
-                            <span class="text-xs font-semibold text-gray-500">去重 - 低频优先</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        ${categoryCards}
+                    </div>
+                    <div class="border-t border-slate-100 pt-6">
+                        <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">全部题库</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <button class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold text-sm" onclick="startPractice('asc')">正序</button>
+                            <button class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold text-sm" onclick="startPractice('random')">乱序</button>
+                            <button class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold text-sm" onclick="startPractice('freq_desc')">高频优先</button>
+                            <button class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold text-sm" onclick="startPractice('freq_asc')">低频优先</button>
                         </div>
                     </div>
                 </div>
@@ -1109,7 +1248,8 @@
             
             if (state.mode === 'practice') {
                 if (q.occurrences) {
-                    infoStr = `<span style="color:#666">Freq: ${q.frequency} / ${q.occurrences.join(' / ')}</span>`;
+                    const category = CATEGORY_CONFIG[getQuestionCategory(q)];
+                    infoStr = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="category-pill">${category.label}</span><span style="color:#666">Freq: ${q.frequency}</span></div>`;
                 }
             } else if (state.mode === 'mock') {
                 infoStr = `
@@ -1138,7 +1278,9 @@
     // 修复 3：做题界面空格消除，标点符号紧密贴合
     function renderQuestion() {
         const q = state.questions[state.currentQIndex];
-        const answers = state.answers[q.id];
+        const answers = state.answers[q.id] || {};
+        const category = CATEGORY_CONFIG[getQuestionCategory(q)];
+        const wholeSentenceCorrect = isQuestionCorrect(q, answers);
 
         let sentenceHtml = '';
         let prevWasBlank = false;
@@ -1168,24 +1310,25 @@
                     }
 
                     // 完全去掉了换行与多余空格
-                    sentenceHtml += `<span class="filled-word" style="${colorStyle}" draggable="${!state.testFinished}" onclick="handleSlotClick('${slot.id}')" ondragstart="onDragStart(event, '${filledOpt.id}', '${slot.id}')" ondragend="onDragEnd(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropSlot(event, '${slot.id}')">${textToShow}</span>`;
+                    sentenceHtml += `<span class="filled-word" role="button" tabindex="0" aria-label="撤回词块 ${textToShow}" style="${colorStyle}" draggable="${!state.testFinished}" onclick="handleSlotClick('${slot.id}')" onkeydown="handleSlotKey(event, '${slot.id}')" ondragstart="onDragStart(event, '${filledOpt.id}', '${slot.id}')" ondragend="onDragEnd(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropSlot(event, '${slot.id}')">${textToShow}</span>`;
                 } else {
-                    sentenceHtml += `<span class="drop-slot text-transparent" id="slot_${slot.id}" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropSlot(event, '${slot.id}')">________</span>`;
+                    sentenceHtml += `<span class="drop-slot text-transparent" id="slot_${slot.id}" aria-label="待填写空位">________</span>`;
                 }
             }
         });
 
         const usedOptIds = Object.values(answers);
         let poolHtml = '';
-        q.options.forEach(opt => {
+        (q.displayOptions || q.options).forEach(opt => {
             const isUsed = usedOptIds.includes(opt.id);
-            poolHtml += `<div class="pool-option${isUsed ? ' used' : ''}" aria-disabled="${isUsed}" draggable="${!state.testFinished && !isUsed}" onclick="${isUsed ? '' : `handleOptionClick('${opt.id}')`}" ${isUsed ? '' : `ondragstart="onDragStart(event, '${opt.id}')" ondragend="onDragEnd(event)"`}>${opt.text}</div>`;
+            poolHtml += `<button type="button" class="pool-option${isUsed ? ' used' : ''}" ${isUsed ? 'disabled' : ''} draggable="${!state.testFinished && !isUsed}" onclick="${isUsed ? '' : `handleOptionClick('${opt.id}')`}" ${isUsed ? '' : `ondragstart="onDragStart(event, '${opt.id}')" ondragend="onDragEnd(event)"`}>${opt.text}</button>`;
         });
 
         return `
             <div class="app-container shadow-xl">
                 ${renderTopBar()}
                 <div class="question-area flex-1">
+                    <div class="category-pill" style="align-self:center;margin-bottom:14px">${category.label}</div>
                     <h2 style="font-size: 26px; font-weight: bold; margin-bottom: 50px; color:#111">Make an appropriate sentence.</h2>
                     
                     ${q.isDegraded ? `
@@ -1198,26 +1341,34 @@
                         </div>
                     ` : ''}
                     
-                    <div style="width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 50px;">
-                        <div style="display: flex; align-items: center; gap: 30px;">
-                            <img src="${q.avatar1}" style="width: 110px; height: 110px; object-fit: contain;">
-                            <div style="font-size: 20px; color: #111;">${q.topText}</div>
+                    <div class="dialogue-stack" style="width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 50px;">
+                        <div class="dialogue-row" style="display: flex; align-items: center; gap: 30px;">
+                            <img class="speaker-avatar" src="${q.avatar1}" alt="对话人物一" style="width: 110px; height: 110px; object-fit: contain;">
+                            <div class="dialogue-text" style="font-size: 20px; color: #111;">${q.topText}</div>
                         </div>
                         
-                        <div style="display: flex; align-items: flex-start; gap: 30px;">
-                            <img src="${q.avatar2}" style="width: 110px; height: 110px; object-fit: contain;">
+                        <div class="dialogue-row" style="display: flex; align-items: flex-start; gap: 30px;">
+                            <img class="speaker-avatar" src="${q.avatar2}" alt="对话人物二" style="width: 110px; height: 110px; object-fit: contain;">
                             <div class="sentence-flow" style="flex:1; padding-top: 10px;">
                                 ${sentenceHtml}
                             </div>
                         </div>
                     </div>
 
-                    <div id="options-pool" style="margin-top: 80px; width: 100%; max-width: 900px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; min-height:60px" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropPool(event)">
+                    <p style="width:100%;max-width:900px;margin:28px 0 -50px;color:#64748b;font-size:13px">点击词块会依次填入空位；点击已填词块可撤回，也可拖动调整顺序。</p>
+                    <div id="options-pool" class="options-pool" style="margin-top: 80px; width: 100%; max-width: 900px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; min-height:60px" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropPool(event)">
                         ${poolHtml}
                     </div>
+
+                    ${state.checkActive && state.mode === 'practice' ? `
+                        <div class="answer-panel" role="status" aria-live="polite" style="margin-top:32px;padding:18px 24px;width:100%;max-width:900px;border-radius:14px;border:1px solid ${wholeSentenceCorrect ? '#a7f3d0' : '#fecaca'};background:${wholeSentenceCorrect ? '#ecfdf5' : '#fef2f2'};color:${wholeSentenceCorrect ? '#047857' : '#b91c1c'};font-weight:800">
+                            ${wholeSentenceCorrect
+                                ? '整句正确｜本题 1 分'
+                                : '整句错误｜本题 0 分。任意一个词块顺序错误或空缺，整题即判错。'}
+                        </div>` : ''}
                     
                     ${(state.showAnswerOverlay || state.checkActive) && state.mode === 'practice' ? `
-                        <div style="margin-top: 40px; padding: 24px 32px; background: #fcfdfd; border: 1px solid #e2e8f0; border-radius: 12px; width: 100%; max-width: 900px; box-shadow: 0 4px 6px rgba(0,0,0,0.02)">
+                        <div class="answer-panel" style="margin-top: 28px; padding: 24px 32px; background: #fcfdfd; border: 1px solid #e2e8f0; border-radius: 12px; width: 100%; max-width: 900px; box-shadow: 0 4px 6px rgba(0,0,0,0.02)">
                             <h3 style="font-weight:800; margin-bottom:12px; color:#64748b; font-size:13px; text-transform:uppercase; letter-spacing:0.5px">Correct Answer</h3>
                             <p style="font-size:20px; line-height: 2.2; color:#111">
                                 ${(() => {
@@ -1356,7 +1507,7 @@
         `;
 
         record.questions.forEach((q, idx) => {
-            let isCorrect = true;
+            const isCorrect = isQuestionCorrect(q, record.answers[q.id]);
             let userStr = "", correctStr = "";
             let timeForQ = record.timeSpentPerQ ? record.timeSpentPerQ[q.id] || 0 : 0;
             
@@ -1371,12 +1522,10 @@
                     prevWasBlankForUser = false;
                 } else {
                        prevWasBlankForUser = true;
-                       const ansId = record.answers[q.id][slot.id];
+                       const ansId = record.answers[q.id]?.[slot.id];
                        const userOpt = q.options.find(o => o.id === ansId);
                        const correctOpt = q.options.find(o => o.id === q.correctAnswers[slot.id]);
                        const isSlotCorrect = userOpt && correctOpt && (userOpt.text === correctOpt.text);
-                       if(!isSlotCorrect) isCorrect = false;
-                
                        const opt = userOpt;
                     let w = opt ? opt.text : "";
                     if(sIdx === 0 && w) w = w.charAt(0).toUpperCase() + w.slice(1);
@@ -1463,7 +1612,8 @@
     function render() {
         mainBody.className = (state.screen === 'dashboard' || state.screen === 'practice_setup' || state.screen === 'mock_calendar' || state.screen === 'history' || state.screen === 'history_detail' || state.screen === 'upload' || state.screen === 'data_dashboard') ? '' : 'exam-body';
 
-        if (state.screen === 'upload') appEl.innerHTML = renderUpload();
+        if (state.screen === 'loading') appEl.innerHTML = renderLoading();
+        else if (state.screen === 'upload') appEl.innerHTML = renderUpload();
         else if (state.screen === 'dashboard') appEl.innerHTML = renderDashboard();
         else if (state.screen === 'data_dashboard') appEl.innerHTML = renderDataDashboard();
         else if (state.screen === 'practice_setup') appEl.innerHTML = renderPracticeSetup();
@@ -1476,9 +1626,10 @@
         else if (state.screen === 'review_grid') appEl.innerHTML = renderReviewGrid();
     }
 
-    window.onload = () => render();
+    window.onload = initializeSentenceApp;
 
     window.startPractice = startPractice;
+    window.startCategoryPractice = startCategoryPractice;
     window.startMock = startMock;
     window.beginExam = beginExam;
     window.checkAnswer = checkAnswer;
@@ -1492,6 +1643,7 @@
     window.render = render;
     window.handleOptionClick = handleOptionClick;
     window.handleSlotClick = handleSlotClick;
+    window.handleSlotKey = handleSlotKey;
     window.onDragStart = onDragStart;
     window.onDragEnd = onDragEnd;
     window.onDragOver = onDragOver;

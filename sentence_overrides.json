@@ -1,0 +1,43 @@
+{
+  "2026.3.8D/q1": {
+    "options": ["sure", "for", "I wasn't", "qualified", "I was", "it"]
+  },
+  "2026.3.8D/q9": {
+    "ans": "The website that our professor mentioned has all the details."
+  },
+  "2026.3.2C/q7": {
+    "ans": "My choice was based on the company that offers the best career growth opportunities."
+  },
+  "2026.3.1A/q8": {
+    "ans": "Did the professor assign an interesting topic to you?"
+  },
+  "2026.2.22/q5": {
+    "ans": "I do not usually go to those events."
+  },
+  "2026.2.11A/q2": {
+    "ans": "The syllabus that our professor gave us includes the instructions."
+  },
+  "2026.2.11B/q9": {
+    "sen2": "________ ________ ________ ________ ________ ________."
+  },
+  "2026.2.11B/q10": {
+    "options": ["the", "big store", "that is", "offering", "discounts", "is", "selling"]
+  },
+  "2026.2.10E/q3": {
+    "sen2": "________ ________ biology class ________ ________ ________ ________.",
+    "options": ["introductory", "later", "than", "my", "expected", "ran"],
+    "ans": "My introductory biology class ran later than expected."
+  },
+  "2026.2.8B/q6": {
+    "options": ["was", "studying", "at", "the library", "for my", "exam"]
+  },
+  "2026.2.2A/q9": {
+    "ans": "They are in the drawer where I keep the textbooks."
+  },
+  "2026.2.1E/q7": {
+    "options": ["energy", "in", "focuses on", "the group that", "renewable", "solutions"]
+  },
+  "2026.1.27C/q5": {
+    "ans": "My teacher suggested that the school would interest me the most."
+  }
+}

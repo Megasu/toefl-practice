@@ -1,5 +1,6 @@
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import { extname, join } from "node:path";
+import { buildSentenceBank } from "./build-sentence-bank.mjs";
 
 const projectRoot = process.cwd();
 const outputRoot = join(projectRoot, "public", "practice");
@@ -27,3 +28,5 @@ for (const entry of await readdir(projectRoot, { withFileTypes: true })) {
 await cp(join(projectRoot, "reading_qb"), join(outputRoot, "reading_qb"), {
   recursive: true,
 });
+
+await buildSentenceBank({ projectRoot, outputRoot });

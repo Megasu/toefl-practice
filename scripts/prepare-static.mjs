@@ -8,6 +8,7 @@ const excludedRootFiles = new Set([
   "package-lock.json",
   "package.json",
   "tsconfig.json",
+  "vercel.json",
 ]);
 
 await rm(outputRoot, { recursive: true, force: true });

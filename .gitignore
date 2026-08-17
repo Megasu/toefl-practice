@@ -12,5 +12,6 @@
 .DS_Store
 .env*
 npm-debug.log*
+*.tsbuildinfo
 /outputs/
 /work/

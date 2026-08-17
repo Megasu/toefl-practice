@@ -4,7 +4,7 @@ import { buildSentenceBank } from "./build-sentence-bank.mjs";
 
 const projectRoot = process.cwd();
 const outputRoot = join(projectRoot, "public", "practice");
-const rootExtensions = new Set([".html", ".json", ".md"]);
+const rootExtensions = new Set([".html", ".json", ".md", ".css", ".js"]);
 const excludedRootFiles = new Set([
   "package-lock.json",
   "package.json",

@@ -657,8 +657,7 @@
                         </div>
                         <div class="flex justify-between items-end relative z-10">
                             <span
-                                class="bg-white/60 text-teal-900 text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-sm">定语从句
-                                · 名词性从句 · 问句 · 固定搭配</span>
+                                class="bg-white/60 text-teal-900 text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-sm">排列词块，组成正确句子</span>
                             <div
                                 class="w-10 h-10 rounded-full bg-teal-900 text-white flex items-center justify-center transform group-hover:translate-x-2 transition-transform shadow-md">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -682,7 +681,7 @@
                             <p class="text-sky-800/80 font-medium">Listen &amp; Choose</p>
                         </div>
                         <div class="flex justify-between items-end relative z-10">
-                            <span id="listening-entry-meta" class="bg-white/70 text-sky-900 text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-sm">每题一段音频 · 选择最佳回应</span>
+                            <span class="bg-white/70 text-sky-900 text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-sm">听一句，选出最合适的回应</span>
                             <div class="w-10 h-10 rounded-full bg-sky-900 text-white flex items-center justify-center transform group-hover:translate-x-2 transition-transform shadow-md">
                                 <span class="material-symbols-rounded text-xl" aria-hidden="true">arrow_forward</span>
                             </div>
@@ -4064,15 +4063,13 @@
         async function detectListeningBank() {
             const entry = document.getElementById('listening-entry');
             const grid = document.getElementById('primary-mode-grid');
-            const meta = document.getElementById('listening-entry-meta');
-            if (!entry || !grid || !meta) return;
+            if (!entry || !grid) return;
             try {
                 const response = await fetch('./listening_qb/manifest.json?v=1', { cache: 'no-store' });
                 if (!response.ok) return;
                 const listeningManifest = await response.json();
                 const questionCount = Number(listeningManifest.questionCount);
                 if (!listeningManifest.enabled || !Number.isInteger(questionCount) || questionCount <= 0) return;
-                meta.textContent = `${questionCount} 道题 · 每题一段音频 · 选择最佳回应`;
                 entry.classList.remove('view-hidden');
                 grid.classList.add('has-listening');
             } catch {

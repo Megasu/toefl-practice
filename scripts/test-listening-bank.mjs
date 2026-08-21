@@ -68,10 +68,11 @@ assert(!prepareScript.includes("INCLUDE_PRIVATE_LISTENING"), "公开构建不得
 assert(prepareScript.includes('join(projectRoot, "listening_qb")'), "静态构建必须复制授权听力题库");
 assert(prepareScript.includes('join(outputRoot, "listening_qb")'), "静态构建必须输出听力题库");
 assert(homeHtml.includes('id="listening-entry"'), "主页必须提供听力入口");
-assert(homeHtml.includes('id="listening-entry-meta"'), "主页必须提供动态题量文案容器");
 assert(homeHtml.includes("detectListeningBank"), "主页入口必须按题库是否存在动态显示");
-assert(homeHtml.includes("`${questionCount} 道题 · 每题一段音频 · 选择最佳回应`"), "主页题量必须由题库清单动态生成");
 assert(!homeHtml.includes("questionCount !== 30"), "主页入口不得把题量写死为 30");
+assert(homeHtml.includes("排列词块，组成正确句子"), "句子组合入口必须说明用户要完成的动作");
+assert(homeHtml.includes("听一句，选出最合适的回应"), "听力入口必须说明用户要完成的动作");
+assert(!homeHtml.includes("道题 · 每题一段音频"), "主页入口不应把题量和系统结构当成主文案");
 assert(listeningHtml.includes("./listening.css"), "听力页必须使用独立样式文件");
 assert(listeningHtml.includes("./listening.js"), "听力页必须使用独立交互脚本");
 assert(listeningHtml.includes("TOEFL 备考系统"), "听力页必须沿用主站品牌导航");

@@ -26,7 +26,7 @@
     <meta name="twitter:description" content="1143 道句子组合题，支持四类语法专项与整句判分。">
     <meta name="twitter:image" content="https://toefl-practice-cn.lively-snow-1376.chatgpt.site/og.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- 引入 SheetJS 用于导出原生 Excel -->
@@ -68,6 +68,31 @@
         .dash-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .material-symbols-rounded {
+            font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+            line-height: 1;
+        }
+
+        .primary-mode-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        @media (min-width: 768px) {
+            .primary-mode-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .primary-mode-grid.has-listening {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 1280px) {
+            .primary-mode-grid.has-listening {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
         }
 
         .fill-blank-input {
@@ -577,7 +602,7 @@
             <div class="max-w-[1400px] mx-auto">
                 <h2 class="text-3xl font-black text-slate-800 mb-8">选择学习模式</h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div id="primary-mode-grid" class="primary-mode-grid grid gap-6 mb-6">
                     <div class="dash-card bg-[#dcfce7] rounded-3xl p-8 cursor-pointer flex flex-col justify-between min-h-[280px] relative overflow-hidden group border border-green-200 shadow-sm"
                         onclick="navTo('view-practice-hub')">
                         <div
@@ -640,6 +665,26 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                                 </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="listening-entry" class="view-hidden dash-card bg-[#e0f2fe] rounded-3xl p-8 cursor-pointer flex flex-col justify-between min-h-[280px] relative overflow-hidden group border border-sky-200 shadow-sm"
+                        onclick="window.location.href='./listening.html'">
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-white/70 backdrop-blur-sm rounded-2xl flex items-center justify-center text-sky-700 mb-6 shadow-sm">
+                                <span class="material-symbols-rounded text-2xl" aria-hidden="true">headphones</span>
+                            </div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-4xl font-black text-sky-950">听力回应</h3>
+                                <span class="bg-sky-700 text-white text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wide shadow-sm">Listening</span>
+                            </div>
+                            <p class="text-sky-800/80 font-medium">Listen &amp; Choose</p>
+                        </div>
+                        <div class="flex justify-between items-end relative z-10">
+                            <span class="bg-white/70 text-sky-900 text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-sm">30 道 · 一题一听力 · 最佳回应</span>
+                            <div class="w-10 h-10 rounded-full bg-sky-900 text-white flex items-center justify-center transform group-hover:translate-x-2 transition-transform shadow-md">
+                                <span class="material-symbols-rounded text-xl" aria-hidden="true">arrow_forward</span>
                             </div>
                         </div>
                     </div>
@@ -4016,8 +4061,26 @@
         };
         // ============================================================================
 
+        async function detectListeningBank() {
+            const entry = document.getElementById('listening-entry');
+            const grid = document.getElementById('primary-mode-grid');
+            if (!entry || !grid) return;
+            try {
+                const response = await fetch('./listening_qb/manifest.json?v=1', { cache: 'no-store' });
+                if (!response.ok) return;
+                const listeningManifest = await response.json();
+                if (!listeningManifest.enabled || listeningManifest.questionCount !== 30) return;
+                entry.classList.remove('view-hidden');
+                grid.classList.add('has-listening');
+            } catch {
+                entry.classList.add('view-hidden');
+                grid.classList.remove('has-listening');
+            }
+        }
+
         // ===== MOBILE: 修复 iOS 键盘收起后按钮 300ms 内失效问题 =====
         document.addEventListener('DOMContentLoaded', function () {
+            detectListeningBank();
             // 给所有按钮同时监听 touchend，防止 click 穿透失效
             document.body.addEventListener('touchend', function (e) {
                 const btn = e.target.closest('button, [onclick]');

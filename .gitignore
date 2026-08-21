@@ -16,3 +16,6 @@ npm-debug.log*
 /outputs/
 /work/
 /qa/
+
+# Local source staging; the authorized distribution copy lives in /listening_qb.
+/private/listening_ets/
